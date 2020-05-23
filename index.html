@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en"></html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <script src="../libraries/p5.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.10.2/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.10.2/addons/p5.dom.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.11/addons/p5.sound.min.js"></script> -->
+
+    <script src="soccer.js"></script>
+    <!-- <script src="input.js"></script> -->
+    <!-- <script src="node.js"></script>
+    <script src="game.js"></script>
+
+    <script src="matrix.js"></script>
+    <script src="nnlib.js"></script> -->
+    
+    <!-- <link rel="stylesheet" type="text/css" href="style.css"> -->
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Raleway:wght@500&display=swap" rel="stylesheet"> 
+    <style>
+      body {
+        padding: 0;
+        margin: 0;
+        background-color: aliceblue;
+      }
+
+      h1{
+        font-family: 'Abril Fatface', cursive;
+        text-align: center;
+      }
+
+      #canvascontainer{
+        text-align: center;
+      }
+
+      h2{
+        text-align: center;
+        font-weight: 800;
+        font-family: 'Raleway', sans-serif;
+      }
+      p{
+        text-align: center;
+        font-family: 'Raleway', sans-serif;
+      }
+      button{
+        font-family: 'Raleway', sans-serif;
+        padding: 10px;
+        background-color:lightgreen;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SOCCER AI</h1>
+    <div id="canvascontainer"></div>
+    <h2 id="score"></h2>
+    <h2 id="team"></h2>
+    <p>
+      <button id="redButton">Play as RED</button>
+      <button id="blueButton">Play as BLUE</button>
+    </p>
+    <p>
+      <button id="pause">Pause</button>
+    </p>
+    <p id="tip"></p>
+  </body>
+</html>

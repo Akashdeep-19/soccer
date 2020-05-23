@@ -4,6 +4,11 @@ var region = [];
 var bot;
 var passSpeed = 2;
 var shootSpeed = 4;
+var scoreSpan, teamSpan, tipSpan;
+var playBlueButton,playRedButton, pausedButton;
+var playing = false,done=false, paused = false;
+var player;
+var time;
 var blueData = [[860,300,'gk',0],
                  [750,250,'d',300],[750,350,'d',300],[750,100,'d',200],[750,500,'d',200],
                  [600,300,'m',150],[600,100,'m',30],[600,500,'m',30],
@@ -14,19 +19,104 @@ var redData = [[450,300,'f',100],[450,100,'f',100],[450,500,'f',100],
                [40,300,'gk',0]];
 
 function setup(){
-    createCanvas(900,600);
+    let canvas = createCanvas(900,600);
+    canvas.parent('canvascontainer');
+    scoreSpan = select('#score');
+    tipSpan = select('#tip');
+    teamSpan = select('#team');
+    playBlueButton = select('#blueButton');
+    playRedButton = select('#redButton');
+    pausedButton = select('#pause')
+    playBlueButton.mousePressed(toggleBlue);
+    playRedButton.mousePressed(toggleRed);
+    pausedButton.mousePressed(togglePause);
    // frameRate(70);
     var blue = color(0,0,255);
     var red = color(255,0,0);
-    team[0] = new Team(blueData,0,90,blue);
-    team[1] = new Team(redData,450,80,red);
+    team[0] = new Team(blueData,0,90,blue,false);
+    team[1] = new Team(redData,450,80,red,false);
     team[0].opps = team[1];
     team[1].opps = team[0];
     ball = new Ball();
 }
 
+function toggleBlue(){
+    player = 0;
+    togglePlay();
+    if(playing){
+        var blue = color(0,0,255);
+        var red = color(255,0,0);
+        team[0] = new Team(blueData,0,90,blue,true);
+        team[1] = new Team(redData,450,80,red,false);
+        team[0].opps = team[1];
+        team[1].opps = team[0];
+        ball = new Ball();
+        
+    }
+}
+
+
+function toggleRed(){
+    player = 1;
+    togglePlay();
+    if(playing){
+        var blue = color(0,0,255);
+        var red = color(255,0,0);
+        team[0] = new Team(blueData,0,90,blue,false);
+        team[1] = new Team(redData,450,80,red,true);
+        team[0].opps = team[1];
+        team[1].opps = team[0];
+        ball = new Ball();
+    }
+}
+
+function togglePlay(){
+    playing = !playing;
+    if(playing){
+        playBlueButton.html('Watch AI');
+        playRedButton.html('Select Sides/Restart');
+        timer = millis();
+        tipSpan.html('Attacking :</br>Click near a player to pass</br>Press space to shoot</br>Defending :</br>Click near a player to go after the ball')
+    }
+    else{
+        if(done)loop();
+        playBlueButton.html('Play as Blue Team');
+        playRedButton.html('Play as Red Team');
+        var blue = color(0,0,255);
+        var red = color(255,0,0);
+        team[0] = new Team(blueData,0,90,blue,false);
+        team[1] = new Team(redData,450,80,red,false);
+        team[0].opps = team[1];
+        team[1].opps = team[0];
+        ball = new Ball();
+        tipSpan.html('');
+    }
+}
+
+function togglePause(){
+    paused = !paused;
+    if(paused){
+        pausedButton.html('Play')
+    }
+    else{
+        pausedButton.html('Pause')
+        loop();
+    }
+}
+
 function draw(){
-    background(0,255,0);
+    background(0,180,0);
+    stroke(255);
+    strokeWeight(2)
+    line(width/2,0,width/2,height);
+    noFill();
+    ellipse(width/2,height/2,100);
+    rect(0,height/2,300,height/2);
+    rect(width,height/2,-300,height/2);
+    scoreSpan.html(`RED ${team[1].score} : ${team[0].score} BLUE`)
+
+    
+
     team[0].draw();
     team[1].draw();
     ball.show();
@@ -35,7 +125,56 @@ function draw(){
     fill(240);
     rect(0,300,40,100);
     rect(900,300,40,100);
+
+    if(playing){
+        time = floor((millis() - timer)/1000);
+        scoreSpan.html(' time : '+time,true);
+        var teamCol = player==0?'BLUE':'RED';
+        teamSpan.html('You are controlling '+teamCol+' team');
+
+        if(time >= 90){
+            var winner = team[0].score > team[1].score?'BLUE':(team[0].score == team[1].score?'DRAW':'RED');
+            textSize(80);
+            textAlign(CENTER, CENTER);
+            fill(0);
+            text(winner + ' WINS',width/2,height/2);
+            done = true;
+            noLoop();
+        }
+    }
+    else{
+        teamSpan.html('');
+    }
+    if(paused){
+        textSize(80);
+        textAlign(CENTER, CENTER);
+        fill(0);
+        text('PAUSED',width/2,height/2);
+        noLoop();
+    }
 }
+
+function mousePressed(event){
+    console.log(event)
+    if(playing){
+        if(team[player].state == 'attacking')
+            team[player].pass(team[player].closestToPos(createVector(mouseX,mouseY)));
+        else
+            team[player].defender = team[player].closestToPos(createVector(mouseX,mouseY));
+    }
+    return false;
+}
+
+function keyPressed(){
+    if(key == ' '){
+        if(playing){
+            if(team[player].state == 'attacking')team[player].shoot();
+        }
+    }
+    return false;
+}
+
+
 
 function error(rating,max){
     var c = 0.1*pow(1.023292992,rating);
@@ -49,6 +188,7 @@ function error(rating,max){
 function Ball(){
     this.pos = createVector(450,300);
     this.vel = createVector();
+    this.holder = undefined;
     
     this.update = function(){
         this.pos.add(this.vel);
@@ -96,6 +236,7 @@ function Ball(){
     
     this.out = function(){
         if(this.pos.y > 600 || this.pos.y < 0 && this.pos.x>0 && this.pos.x<900){
+            this.vel.setMag(0);
             return this.pos;
         }
         else
@@ -103,7 +244,7 @@ function Ball(){
     }
 }
 
-function Bot(x,y,pos,attackPos){
+function Bot(x,y,pos,attackPos,col){
     this.homePos = createVector(x,y);
     this.pos = createVector();
     this.pos = this.homePos.copy();
@@ -117,14 +258,20 @@ function Bot(x,y,pos,attackPos){
     this.safeRange = 50;
     this.speed = 0.9;
     this.state = 'wait';
+    this.col = col;
+    this.defender;
+    this.tackled = false;
+    this.tackleCooldown = 500;
+    this.tackleTimer = 0;
     
     this.update = function(){
         this.pos.add(this.vel);
+        this.tackleRecover();
     }
     
-    this.show = function(color){
+    this.show = function(){
         noStroke();
-        fill(color);
+        fill(this.col);
         ellipse(this.pos.x,this.pos.y,20);
     }
     
@@ -188,8 +335,10 @@ function Bot(x,y,pos,attackPos){
     
     this.ballInRange = function(ball){
         var d = p5.Vector.dist(ball.pos,this.pos);
-        if(d < this.range){
+        if(d < this.range && !this.tackled){
+            if(ball.holder && ball.holder != this)ball.holder.tackled = true;
             this.haveBall = true;
+            ball.holder = this;
         }
         else{
             this.haveBall = false;
@@ -211,16 +360,24 @@ function Bot(x,y,pos,attackPos){
         dir.normalize();
         this.vel = dir.mult(speed);
     }
+
+    this.tackleRecover = function(){
+        if(this.tackled){
+            if(millis()-this.tackleTimer > this.tackleCooldown)
+                this.tackled = false;
+        }
+        else this.tackleTimer = millis();
+    }
 }
 
-function Team(data,half,rating,color){
+function Team(data,half,rating,color,ai){
     this.bots = [];
     this.supportSpots = [];
     this.ballIsWithUs = false;
     this.data = data;
     this.opps;
     for(var i = 0;i<this.data.length;i++){
-        this.bots[i] = new Bot(this.data[i][0],this.data[i][1],this.data[i][2],this.data[i][3]);
+        this.bots[i] = new Bot(this.data[i][0],this.data[i][1],this.data[i][2],this.data[i][3],color);
     }
     for(var i = 0;i < 6;i++){
         for(var j = 0;j < 11;j++){
@@ -235,6 +392,7 @@ function Team(data,half,rating,color){
         this.goal = 880;
         this.state = 'kickOffW';
     }
+    this.ai = ai;
     this.rating = rating;
     this.target;
     this.score = 0;
@@ -248,13 +406,14 @@ function Team(data,half,rating,color){
     
     this.draw = function(){
         for(bot of this.bots){
-            bot.show(color);
+            bot.show();
             bot.update();
         }
         this.gameStates();
         this.ballWithUs();
         this.inControl(this.opps);
         this.ballCheck();
+        
     }
     
     this.gameStates = function(){
@@ -263,7 +422,7 @@ function Team(data,half,rating,color){
             this.receiver = null;
             this.closestPlayer = this.closestToPos(ball.pos);
             for(bot of this.bots){
-                if(bot == this.closestPlayer)
+                if(bot == this.closestPlayer || bot == this.defender)
                     bot.chaseBall();
                 else if(!bot.marking){
                     bot.seekPos(bot.homePos);
@@ -274,38 +433,45 @@ function Team(data,half,rating,color){
         if(this.state == 'attacking'){
             this.calcSupportSpot(this.opps.bots);
             this.closestPlayer = null;
+            this.defender = null;
             if(!this.controllingPlayer.kicked){
-            if(this.canShoot(this.opps.bots,this.controllingPlayer.pos,shootSpeed)){
-                this.target.y += error(this.rating,20) 
-                this.controllingPlayer.kick(this.target,shootSpeed);
-                this.receiver = null;
-            }
-            
-            else if(this.firstSupport.inRange(this.firstSupportSpot,this.firstSupport.range)){
-                this.controllingPlayer.kick(this.firstSupport.pos,passSpeed);
-                this.receiver = this.firstSupport;
-            }
-            
-            else if(this.secondSupport.inRange(this.secondSupportSpot,this.secondSupport.range)){
-                this.controllingPlayer.kick(this.secondSupport.pos,passSpeed);
-                this.receiver = this.secondSupport;
-            }
-            
-            else if(this.controllingPlayer.opponentCount(this.opps.bots) == 0){
-                this.controllingPlayer.moveWithBall(createVector(this.goal,300));
-                this.receiver = null;
-            }
-            
-            else{
-                if(this.findPass() != null){
-                    this.controllingPlayer.kick(p5.Vector.add(this.findPass().pos,createVector(error(this.rating,10),error(this.rating,10))),passSpeed);
-                    this.receiver = this.findPass();
+                if(!this.ai){
+                    if(this.canShoot(this.opps.bots,this.controllingPlayer.pos,shootSpeed)){
+                        this.target.y += error(this.rating,20) 
+                        this.controllingPlayer.kick(this.target,shootSpeed);
+                        this.receiver = null;
+                    }
+                    
+                    else if(this.firstSupport.inRange(this.firstSupportSpot,this.firstSupport.range)){
+                        this.controllingPlayer.kick(this.firstSupport.pos,passSpeed);
+                        this.receiver = this.firstSupport;
+                    }
+                    
+                    else if(this.secondSupport.inRange(this.secondSupportSpot,this.secondSupport.range)){
+                        this.controllingPlayer.kick(this.secondSupport.pos,passSpeed);
+                        this.receiver = this.secondSupport;
+                    }
+                    
+                    else if(this.controllingPlayer.opponentCount(this.opps.bots) == 0){
+                        this.controllingPlayer.moveWithBall(createVector(this.goal,300));
+                        this.receiver = null;
+                    }
+                    
+                    else{
+                        if(this.findPass() != null){
+                            this.controllingPlayer.kick(p5.Vector.add(this.findPass().pos,createVector(error(this.rating,10),error(this.rating,10))),passSpeed);
+                            this.receiver = this.findPass();
+                        }
+                        else{
+                            this.controllingPlayer.moveWithBall(createVector(this.goal,300));
+                            this.receiver = null;
+                        }
+                    }
                 }
                 else{
                     this.controllingPlayer.moveWithBall(createVector(this.goal,300));
                     this.receiver = null;
                 }
-            }
             }
             for(bot of this.bots){
                 bot.marking = false;
@@ -380,11 +546,11 @@ function Team(data,half,rating,color){
             this.score++;
             ball.pos.set(450,300);
             ball.vel.set(0,0);
-            console.log('stuck');
-            if(this.goal < 450)
-                console.log('BLUE : '+this.score,'RED : '+this.opps.score);
-            else
-                console.log('BLUE : '+this.opps.score,'RED : '+this.score);
+            // console.log('stuck');
+            // if(this.goal < 450)
+            //     console.log('BLUE : '+this.score,'RED : '+this.opps.score);
+            // else
+            //     console.log('BLUE : '+this.opps.score,'RED : '+this.score);
         }
         else if(ball.out() != false && this.state == 'defending'){
             this.state = 'throwIn';
@@ -420,6 +586,18 @@ function Team(data,half,rating,color){
         if(opps.ballWithUs()){
             this.state = 'defending';
         }
+    }
+
+    this.pass = function(player){
+        this.controllingPlayer.kick(player.pos,passSpeed);
+        this.receiver = player;
+    }
+
+    this.shoot = function(){
+        this.canShoot(this.opps.bots,this.controllingPlayer.pos,shootSpeed);
+        this.target.y += error(this.rating,20) 
+        this.controllingPlayer.kick(this.target,shootSpeed);
+        this.receiver = null;
     }
     
     this.calcSupportSpot = function(opps){
