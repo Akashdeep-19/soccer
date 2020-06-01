@@ -133,17 +133,17 @@ function draw(){
         teamSpan.html('You are controlling '+teamCol+' team');
 
         if(time >= 90){
-            var winner = team[0].score > team[1].score?'BLUE':(team[0].score == team[1].score?'DRAW':'RED');
+            var winner = team[0].score > team[1].score?'BLUE WINS':(team[0].score == team[1].score?'DRAW':'RED WINS');
             textSize(80);
             textAlign(CENTER, CENTER);
             fill(0);
-            text(winner + ' WINS',width/2,height/2);
+            text(winner,width/2,height/2);
             done = true;
             noLoop();
         }
     }
     else{
-        teamSpan.html('');
+        teamSpan.html('AI simulation');
     }
     if(paused){
         textSize(80);
